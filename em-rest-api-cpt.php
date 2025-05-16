@@ -11,8 +11,8 @@
  * text-domain: em-rest-api-cpt
 */
 namespace  em_rest_api_cpt\init_plugin;
-
-
+        require_once __DIR__ . '\classes\make-endpoint.php';
+use em_rest_api_cpt\init_plugin\Classes\Make_Endpoint;
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -37,6 +37,8 @@ final class em_rest_api_cpt {
 
     public function init_plugin() {
         // Check php version
+
+
     }
 
     public static function get_instance() {
