@@ -1,0 +1,24 @@
+{
+	"name": "em-rest-api-cpt",
+	"version": "0.1.0",
+	"description": "Use REST API to populate custom post type. ",
+	"author": "Esmond Mccain",
+	"license": "GPL-2.0-or-later",
+	"keywords": [
+		"WordPress",
+		"Plugin",
+        "REST API"
+	],
+	"files": [
+		"em-rest-api-cpt.php"
+	],
+	"devDependencies": {
+		"@wordpress/scripts": "^27.9.0"
+	},
+	"scripts": {
+        "build": "wp-scripts build",
+        "packages-update": "wp-scripts packages-update",
+        "plugin-zip": "wp-scripts plugin-zip",
+        "start": "wp-scripts start"
+	}
+}
