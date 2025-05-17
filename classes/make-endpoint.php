@@ -16,11 +16,11 @@ if (!class_exists('Make_Endpoint;')) {
 
         public function add_callback_url_endpoint(){
             register_rest_route(
-                'esmond-api/v1/', // Namespace
-                'receive-callback', // Endpoint
+                'esmond-api/v1', // Namespace
+                '/receive', // Endpoint
                 array(
                     'methods'  => 'POST',
-                    'callback' => 'receive_callback'
+                    'callback' => [$this, 'receive_callback']
                 )
             );
         }
