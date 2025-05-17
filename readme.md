@@ -9,5 +9,12 @@ Use REST API to populate custom post type.
 2. Upload `em-rest-api-cpt` zip to the `/wp-content/plugins/` directory.
 3. Extract zip folder. Folder name of plugin should be "em-rest-api-cpt".
 4. Activate the plugin through the 'Plugins' menu in WordPress.
-
-
+5. New Post type "API Data" will now be available.
+6. Endpoint is ``https://yoursite.domain/wp-json/esmond-api/v1/receive``
+7. JSON format for posting `` {
+"name":"",
+"password":"",
+"title":"",
+"body":""
+} ``
+Use the login from user on your WordPress installation.
