@@ -10,6 +10,7 @@
         "REST API"
 	],
 	"files": [
+		"/classes",
 		"em-rest-api-cpt.php"
 	],
 	"devDependencies": {
