@@ -11,7 +11,7 @@
  * text-domain: em-rest-api-cpt
 */
 namespace  em_rest_api_cpt\init_plugin;
-        require_once __DIR__ . '\classes\make-endpoint.php';
+
 use em_rest_api_cpt\init_plugin\Classes\Make_Endpoint;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,19 +26,33 @@ final class em_rest_api_cpt {
     private static $_instance = null;
 
     public function __construct() {
-        add_action( 'init', [ $this, 'i18n' ] );
-        add_action( 'plugins_loaded', [ $this, 'init_plugin' ] );
-
+    
+       add_action( 'init', [ $this, 'i18n' ] );        
+       add_action( 'plugins_loaded', [ $this, 'init_class' ] );
+       add_action( 'init',  [ $this, 'create_post_type']   );
     }
 
     public function i18n() {
         load_plugin_textdomain( 'em-rest-api-cpt' );
     }
 
-    public function init_plugin() {
-        // Check php version
+    public function init_class() {
+        require_once __DIR__ . '\classes\make-endpoint.php';
+   
+     
+    }
 
-
+    public function create_post_type(){
+        
+        $args = array(
+            'public'             => true,
+            'publicly_queryable' => false,
+            'label'              => __( 'API Data', ' em-rest-api-cpt' ),
+            'menu_icon'          => 'dashicons-analytics',
+            'supports'           => array( 'title', 'editor' )
+        );
+        
+        register_post_type( 'apidata', $args );
     }
 
     public static function get_instance() {
@@ -51,7 +65,7 @@ final class em_rest_api_cpt {
 
     }
 
-
 }
+
 
 em_rest_api_cpt::get_instance();
