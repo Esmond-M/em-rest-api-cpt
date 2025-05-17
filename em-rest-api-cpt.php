@@ -37,7 +37,7 @@ final class em_rest_api_cpt {
     }
 
     public function init_class() {
-        require_once __DIR__ . '\classes\make-endpoint.php';
+        require_once __DIR__ . '/classes/make-endpoint.php';
    
      
     }
