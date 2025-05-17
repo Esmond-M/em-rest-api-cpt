@@ -16,5 +16,5 @@ Use REST API to populate custom post type.
 "password":"",
 "title":"",
 "body":""
-} ``
+} `` .
 Use the login from user on your WordPress installation.
