@@ -19,7 +19,7 @@
 	"scripts": {
         "build": "wp-scripts build",
         "packages-update": "wp-scripts packages-update",
-        "plugin-zip": "wp-scripts plugin-zip",
+        "plugin-zip": "wp-scripts plugin-zip && move *.zip build\\",
         "start": "wp-scripts start"
 	}
 }
