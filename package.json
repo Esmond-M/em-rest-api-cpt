@@ -1,7 +1,7 @@
 {
 	"name": "em-rest-api-cpt",
-	"version": "0.1.0",
-	"description": "Use REST API to populate custom post type. ",
+	"version": "0.2.0",
+	"description": "WordPress plugin — custom post type with REST API endpoints (POST, GET, DELETE), API key auth, and admin settings page.",
 	"author": "Esmond Mccain",
 	"license": "GPL-2.0-or-later",
 	"keywords": [
@@ -19,7 +19,7 @@
 	"scripts": {
         "build": "wp-scripts build",
         "packages-update": "wp-scripts packages-update",
-        "plugin-zip": "wp-scripts plugin-zip",
+        "plugin-zip": "wp-scripts plugin-zip && move *.zip build\\",
         "start": "wp-scripts start"
 	}
 }
