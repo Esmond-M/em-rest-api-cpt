@@ -313,4 +313,138 @@ class EM_REST_API_CPT_REST_Baseline_Test extends WP_UnitTestCase {
 
         $this->assertSame( 400, $invalid->get_status() );
     }
+
+    public function test_duplicate_identity_rejected_with_existing_entry_id(): void {
+        $first = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Original entry',
+                'body'       => 'Original body',
+                'source'     => 'Mobile-App',
+                'external_id' => 'AB-123',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 201, $first->get_status() );
+        $existing_id = $first->get_data()['data']['id'];
+
+        $duplicate = $this->request(
+            'POST',
+            '/entries',
+            array(
+                'title'      => 'Duplicate entry',
+                'body'       => 'Should be rejected',
+                'source'     => 'mobile-app',
+                'external_id' => 'ab-123',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 409, $duplicate->get_status() );
+        $this->assertSame( 'rest_duplicate_entry', $duplicate->as_error()->get_error_code() );
+        $this->assertSame( $existing_id, $duplicate->as_error()->get_error_data()['existing_id'] );
+    }
+
+    public function test_duplicate_identity_is_normalized_and_allows_different_sources(): void {
+        $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Case-sensitive source',
+                'body'       => 'First body',
+                'source'     => 'Alpha',
+                'external_id' => 'A-1',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $duplicate = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Same normalized identity',
+                'body'       => 'Should fail',
+                'source'     => 'alpha',
+                'external_id' => 'a-1',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 409, $duplicate->get_status() );
+
+        $allowed = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Different source',
+                'body'       => 'Allowed',
+                'source'     => 'beta',
+                'external_id' => 'A-1',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 201, $allowed->get_status() );
+    }
+
+    public function test_patch_conflict_is_rejected_when_resulting_identity_matches_another_entry(): void {
+        $first = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Lead one',
+                'body'       => 'Lead body',
+                'source'     => 'crm',
+                'external_id' => 'lead-7',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $second = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Lead two',
+                'body'       => 'Second body',
+                'source'     => 'portal',
+                'external_id' => 'lead-9',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 201, $second->get_status() );
+        $second_id = $second->get_data()['data']['id'];
+
+        $conflict = $this->request(
+            'PATCH',
+            '/entries/' . $second_id,
+            array(
+                'source'     => 'crm',
+                'external_id' => 'lead-7',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 409, $conflict->get_status() );
+        $this->assertSame( 'rest_duplicate_entry', $conflict->as_error()->get_error_code() );
+        $this->assertSame( $first->get_data()['data']['id'], $conflict->as_error()->get_error_data()['existing_id'] );
+    }
 }

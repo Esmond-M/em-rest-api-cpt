@@ -161,14 +161,26 @@ class Make_Endpoint {
     public function create_entry( WP_REST_Request $request ): WP_REST_Response|WP_Error {
         $title       = sanitize_text_field( (string) $request->get_param( 'title' ) );
         $body        = wp_kses_post( (string) $request->get_param( 'body' ) );
-        $source      = sanitize_text_field( (string) ( $request->get_param( 'source' )      ?? '' ) );
-        $external_id = sanitize_text_field( (string) ( $request->get_param( 'external_id' ) ?? '' ) );
+        $source      = $this->normalize_identity_value( sanitize_text_field( (string) ( $request->get_param( 'source' ) ?? '' ) ) );
+        $external_id = $this->normalize_identity_value( sanitize_text_field( (string) ( $request->get_param( 'external_id' ) ?? '' ) ) );
 
         if ( '' === trim( $title ) ) {
             return new WP_Error(
                 'rest_invalid_param',
                 __( 'The title field is required and cannot be empty.', 'em-rest-api-cpt' ),
                 array( 'status' => 400 )
+            );
+        }
+
+        $duplicate = $this->find_duplicate_entry( $source, $external_id );
+        if ( null !== $duplicate ) {
+            return new WP_Error(
+                'rest_duplicate_entry',
+                __( 'An entry already exists for this normalized source/external_id pair.', 'em-rest-api-cpt' ),
+                array(
+                    'status'      => 409,
+                    'existing_id' => (int) $duplicate,
+                )
             );
         }
 
@@ -334,6 +346,23 @@ class Make_Endpoint {
             $patch[ $field ] = sanitize_text_field( (string) $value );
         }
 
+        $updated_source   = isset( $patch['source'] ) ? $this->normalize_identity_value( (string) $patch['source'] ) : $this->normalize_identity_value( (string) get_post_meta( $post_id, '_api_source', true ) );
+        $updated_external = isset( $patch['external_id'] ) ? $this->normalize_identity_value( (string) $patch['external_id'] ) : $this->normalize_identity_value( (string) get_post_meta( $post_id, '_external_id', true ) );
+
+        if ( '' !== $this->normalize_identity_value( $updated_source ) && '' !== $this->normalize_identity_value( $updated_external ) ) {
+            $conflict_id = $this->find_duplicate_entry( $updated_source, $updated_external, $post_id );
+            if ( null !== $conflict_id ) {
+                return new WP_Error(
+                    'rest_duplicate_entry',
+                    __( 'This source/external_id pair is already used by another entry.', 'em-rest-api-cpt' ),
+                    array(
+                        'status'      => 409,
+                        'existing_id' => (int) $conflict_id,
+                    )
+                );
+            }
+        }
+
         $payload = array(
             'ID' => $post_id,
         );
@@ -347,11 +376,11 @@ class Make_Endpoint {
         }
 
         if ( isset( $patch['source'] ) ) {
-            update_post_meta( $post_id, '_api_source', $patch['source'] );
+            update_post_meta( $post_id, '_api_source', $this->normalize_identity_value( (string) $patch['source'] ) );
         }
 
         if ( isset( $patch['external_id'] ) ) {
-            update_post_meta( $post_id, '_external_id', $patch['external_id'] );
+            update_post_meta( $post_id, '_external_id', $this->normalize_identity_value( (string) $patch['external_id'] ) );
         }
 
         if ( ! empty( $payload ) && 1 < count( $payload ) ) {
@@ -423,6 +452,48 @@ class Make_Endpoint {
             'external_id' => get_post_meta( $post->ID, '_external_id', true ),
             'received_at' => get_post_meta( $post->ID, '_received_at', true ),
         );
+    }
+
+    private function find_duplicate_entry( string $source, string $external_id, ?int $exclude_id = null ): ?int {
+        $normalized_source = $this->normalize_identity_value( $source );
+        $normalized_id     = $this->normalize_identity_value( $external_id );
+
+        if ( '' === $normalized_source || '' === $normalized_id ) {
+            return null;
+        }
+
+        $posts = get_posts(
+            array(
+                'post_type'      => self::POST_TYPE,
+                'post_status'    => 'any',
+                'posts_per_page' => 1,
+                'post__not_in'   => $exclude_id ? array( $exclude_id ) : array(),
+                'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery
+                    'relation' => 'AND',
+                    array(
+                        'key'     => '_api_source',
+                        'value'   => $normalized_source,
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key'     => '_external_id',
+                        'value'   => $normalized_id,
+                        'compare' => '=',
+                    ),
+                ),
+                'fields'         => 'ids',
+            )
+        );
+
+        if ( empty( $posts ) ) {
+            return null;
+        }
+
+        return (int) $posts[0];
+    }
+
+    private function normalize_identity_value( string $value ): string {
+        return strtolower( trim( (string) $value ) );
     }
 
     private function get_create_args(): array {

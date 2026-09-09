@@ -23,12 +23,14 @@
 - Evidence: the final P1 verification command passed in the WP test container after aligning the PHPUnit version and the fixture metadata to WordPress conventions.
 - Next milestone: P2 validation hardening and access-path regression work.
 
-## Future entry template
+## 2026-09-09 - P4: duplicate identity guard
 
-- Date / milestone:
-- Changes and decisions:
-- Validation commands and results:
-- Limitations or blockers:
-- Next action:
+- Added a normalized identity check for the `(source, external_id)` pair before creating or patching an entry.
+- Duplicate detection now compares lowercased values and returns a stable `rest_duplicate_entry` error with the existing entry ID when a conflict is found.
+- PATCH updates reject identity swaps that would collide with another entry without mutating the original record.
+- Validation:
+  - `npx --yes @wordpress/env run tests-cli -- bash -lc "cd /var/www/html/wp-content/plugins/em-rest-api-cpt && ./vendor/bin/phpunit --configuration ./phpunit.xml.dist --testdox"` failed first on the new duplicate tests and then passed after the normalization fix.
+- Current status: P4 duplicate protection is implemented and verified under the WordPress test environment.
+- Next milestone: P5 CI validation workflow.
 
 Commit history is the authoritative record of commit IDs; record prior IDs here when useful rather than trying to embed a commit's own hash in itself.
