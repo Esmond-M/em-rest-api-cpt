@@ -5,6 +5,8 @@ A WordPress plugin that registers a custom post type (**API Data**) and exposes 
 **Project:** [GitHub Repository](https://github.com/Esmond-M/em-rest-api-cpt)  
 **Author:** [esmondmccain.com](https://esmondmccain.com/)
 
+**Development:** [Improvement plan and progress](docs/README.md)
+
 ---
 
 ## Features
