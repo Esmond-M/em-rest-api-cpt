@@ -18,6 +18,9 @@ vendor/
 # Optional npm cache directory
 .npm
 
+# PHPUnit cache
+.phpunit.result.cache
+
 # Optional eslint cache
 .eslintcache
 
