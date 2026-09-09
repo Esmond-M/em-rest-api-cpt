@@ -41,7 +41,7 @@ Each row is a milestone, not a requirement to fit all work in one commit. Split 
 | ID | Status | Deliverable / suggested commit | Acceptance criteria |
 | --- | --- | --- | --- |
 | P0 | Complete | `docs: establish plugin improvement roadmap` | Canonical plan, progress log, README link, and future-session instructions exist; no runtime changes. |
-| P1 | Ready | `test: add WordPress REST integration baseline` | Reproducible isolated WordPress test database; documented setup; tests dispatch through the REST server for auth, create/list/delete, required fields, source filtering, pagination, wrong post type and missing IDs. Never reset the LocalWP working database. |
+| P1 | Complete | `test: add WordPress REST integration baseline` | Reproducible isolated WordPress test database; documented setup; tests dispatch through the REST server for auth, create/list/delete, required fields, source filtering, pagination, wrong post type and missing IDs. Never reset the LocalWP working database. |
 | P2 | Planned | `fix: tighten entry access and request validation` | Anonymous custom/core REST access tested; any exposure fixed with regression tests; authorized admin editing verified. Arrays/objects/null and sanitized-empty titles rejected without warnings; source `"0"` filtering and stable pagination ordering covered. Key regeneration tests verify capability, nonce, old-key rejection and new-key acceptance. |
 | P3 | Planned | `feat: complete entry read and update endpoints` | Detail GET, PATCH and POST alias work; omitted PATCH fields preserved; invalid patches do not mutate data; wrong type/missing IDs return 404; received timestamp preserved; legacy routes pass. README and settings endpoint examples updated in the same milestone. |
 | P4 | Planned | `feat: prevent duplicate external entries` | Document identity semantics and storage decision first. Same pair returns 409, different sources can reuse IDs, legacy requests remain valid, PATCH conflicts covered. Concurrent requests cannot create two records for the same pair. Failure recovery, deletion/reuse, admin/core writes, and pre-existing duplicates are explicitly handled or documented as boundaries. |
@@ -67,7 +67,7 @@ Each row is a milestone, not a requirement to fit all work in one commit. Split 
 
 ## Next action
 
-P1: inspect available PHP, Composer, WordPress and database tooling; choose an isolated WordPress integration-test setup and add baseline tests. Read this plan and the progress log before making changes.
+P2: tighten entry access and request validation by auditing anonymous access and adding regression coverage for invalid titles, null/array payloads, and protected admin access before changing runtime behavior.
 
 ## References
 

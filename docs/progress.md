@@ -10,6 +10,19 @@
 - Original brainstorming file remains untouched and untracked; it is not required to follow the canonical plan.
 - Next milestone: P1, isolated WordPress integration-test baseline.
 
+## 2026-09-09 - P1: WordPress REST baseline setup
+
+- Added an isolated `wp-env` test configuration and a PHPUnit bootstrap that targets the plugin’s WordPress test environment without touching the LocalWP site database.
+- Added an initial REST integration suite covering auth failure, create/list/delete success, required title validation, source filtering and pagination, and missing/wrong-type IDs.
+- Added PHP dependency management for the PHPUnit Polyfills requirement needed by the WP test suite and documented the local setup command in package scripts.
+- Validation:
+  - `npx --yes @wordpress/env start --update --config .wp-env.json` succeeded and started the WordPress dev and test sites.
+  - `npx --yes @wordpress/env run tests-cli -- bash -lc "cd /var/www/html/wp-content/plugins/em-rest-api-cpt && composer install --no-interaction --no-progress"` was required before the suite could run because the WordPress test bootstrap needs PHPUnit Polyfills.
+  - `npx --yes @wordpress/env run tests-cli -- bash -lc "cd /var/www/html/wp-content/plugins/em-rest-api-cpt && /home/PC/.composer/vendor/bin/phpunit --configuration ./phpunit.xml.dist --filter EM_REST_API_CPT_REST_Baseline_Test --testdox"` is the targeted validation command for the P1 milestone and was used after installing the dependency.
+- Current status: P1 baseline is in place and passable under the isolated WordPress test environment. The local repeatable validation command is `npm run test:php`.
+- Evidence: the final P1 verification command passed in the WP test container after aligning the PHPUnit version and the fixture metadata to WordPress conventions.
+- Next milestone: P2 validation hardening and access-path regression work.
+
 ## Future entry template
 
 - Date / milestone:

@@ -20,6 +20,7 @@
         "build": "wp-scripts build",
         "packages-update": "wp-scripts packages-update",
         "plugin-zip": "wp-scripts plugin-zip && move *.zip build\\",
-        "start": "wp-scripts start"
+        "start": "wp-scripts start",
+        "test:php": "npx --yes @wordpress/env run tests-cli -- bash -lc 'cd /var/www/html/wp-content/plugins/em-rest-api-cpt && ./vendor/bin/phpunit --configuration ./phpunit.xml.dist --testdox'"
 	}
 }
