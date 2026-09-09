@@ -33,4 +33,14 @@
 - Current status: P4 duplicate protection is implemented and verified under the WordPress test environment.
 - Next milestone: P5 CI validation workflow.
 
+## 2026-09-09 - P5: automated CI validation
+
+- Added a repeatable local PHP lint script and a GitHub Actions workflow that runs the plugin’s WordPress REST suite and PHP syntax checks on pushes and pull requests.
+- Chosen verification path: PHP 8.2 and 8.3 matrix, npm install, composer install, then `npm run ci:check`.
+- Validation:
+  - `npm run lint:php` was run locally to confirm PHP files parse cleanly.
+  - `npm run test:php` was run locally in the WordPress test container and passed with the project’s current suite.
+- Current status: P5 CI validation is implemented and the local equivalent of the workflow has passed.
+- Next milestone: P6 packaging reproducibility.
+
 Commit history is the authoritative record of commit IDs; record prior IDs here when useful rather than trying to embed a commit's own hash in itself.
