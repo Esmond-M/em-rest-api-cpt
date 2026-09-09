@@ -13,9 +13,16 @@ build/Release
 
 # Dependency directories
 node_modules/
+vendor/
 
 # Optional npm cache directory
 .npm
+
+# PHPUnit cache
+.phpunit.result.cache
+
+# Local brainstorming notes and working drafts
+em-rest-api-cpt-portfolio-improvement-plan.md
 
 # Optional eslint cache
 .eslintcache

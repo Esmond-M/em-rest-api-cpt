@@ -36,6 +36,17 @@ class Make_Endpoint {
             )
         );
 
+        register_rest_route(
+            self::API_NAMESPACE,
+            '/entries',
+            array(
+                'methods'             => 'POST',
+                'callback'            => [ $this, 'create_entry' ],
+                'permission_callback' => [ $this, 'check_api_key' ],
+                'args'                => $this->get_create_args(),
+            )
+        );
+
         // GET — list entries with optional filtering.
         register_rest_route(
             self::API_NAMESPACE,
@@ -64,6 +75,35 @@ class Make_Endpoint {
                         'description' => __( 'Page number.', 'em-rest-api-cpt' ),
                     ),
                 ),
+            )
+        );
+
+        register_rest_route(
+            self::API_NAMESPACE,
+            '/entries/(?P<id>\d+)',
+            array(
+                'methods'             => 'GET',
+                'callback'            => [ $this, 'get_entry' ],
+                'permission_callback' => [ $this, 'check_api_key' ],
+                'args'                => array(
+                    'id' => array(
+                        'required'    => true,
+                        'type'        => 'integer',
+                        'minimum'     => 1,
+                        'description' => __( 'Post ID of the entry to retrieve.', 'em-rest-api-cpt' ),
+                    ),
+                ),
+            )
+        );
+
+        register_rest_route(
+            self::API_NAMESPACE,
+            '/entries/(?P<id>\d+)',
+            array(
+                'methods'             => 'PATCH',
+                'callback'            => [ $this, 'update_entry' ],
+                'permission_callback' => [ $this, 'check_api_key' ],
+                'args'                => $this->get_patch_args(),
             )
         );
 
@@ -121,8 +161,28 @@ class Make_Endpoint {
     public function create_entry( WP_REST_Request $request ): WP_REST_Response|WP_Error {
         $title       = sanitize_text_field( (string) $request->get_param( 'title' ) );
         $body        = wp_kses_post( (string) $request->get_param( 'body' ) );
-        $source      = sanitize_text_field( (string) ( $request->get_param( 'source' )      ?? '' ) );
-        $external_id = sanitize_text_field( (string) ( $request->get_param( 'external_id' ) ?? '' ) );
+        $source      = $this->normalize_identity_value( sanitize_text_field( (string) ( $request->get_param( 'source' ) ?? '' ) ) );
+        $external_id = $this->normalize_identity_value( sanitize_text_field( (string) ( $request->get_param( 'external_id' ) ?? '' ) ) );
+
+        if ( '' === trim( $title ) ) {
+            return new WP_Error(
+                'rest_invalid_param',
+                __( 'The title field is required and cannot be empty.', 'em-rest-api-cpt' ),
+                array( 'status' => 400 )
+            );
+        }
+
+        $duplicate = $this->find_duplicate_entry( $source, $external_id );
+        if ( null !== $duplicate ) {
+            return new WP_Error(
+                'rest_duplicate_entry',
+                __( 'An entry already exists for this normalized source/external_id pair.', 'em-rest-api-cpt' ),
+                array(
+                    'status'      => 409,
+                    'existing_id' => (int) $duplicate,
+                )
+            );
+        }
 
         $post_id = wp_insert_post(
             array(
@@ -152,13 +212,7 @@ class Make_Endpoint {
             array(
                 'success' => true,
                 'message' => __( 'Entry created successfully.', 'em-rest-api-cpt' ),
-                'data'    => array(
-                    'id'          => $post_id,
-                    'title'       => $title,
-                    'source'      => $source,
-                    'external_id' => $external_id,
-                    'received_at' => $received_at,
-                ),
+                'data'    => $this->serialize_entry( get_post( $post_id ) ),
             ),
             201
         );
@@ -193,14 +247,7 @@ class Make_Endpoint {
         $entries = array();
 
         foreach ( $query->posts as $post ) {
-            $entries[] = array(
-                'id'          => $post->ID,
-                'title'       => $post->post_title,
-                'body'        => $post->post_content,
-                'source'      => get_post_meta( $post->ID, '_api_source', true ),
-                'external_id' => get_post_meta( $post->ID, '_external_id', true ),
-                'received_at' => get_post_meta( $post->ID, '_received_at', true ),
-            );
+            $entries[] = $this->serialize_entry( $post );
         }
 
         return new WP_REST_Response(
@@ -210,6 +257,148 @@ class Make_Endpoint {
                 'total_pages' => (int) $query->max_num_pages,
                 'page'        => (int) $request->get_param( 'page' ),
                 'data'        => $entries,
+            ),
+            200
+        );
+    }
+
+    public function get_entry( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+        $post_id = (int) $request->get_param( 'id' );
+        $post    = get_post( $post_id );
+
+        if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+            return new WP_Error(
+                'rest_not_found',
+                __( 'No entry found with that ID.', 'em-rest-api-cpt' ),
+                array( 'status' => 404 )
+            );
+        }
+
+        return new WP_REST_Response(
+            array(
+                'success' => true,
+                'data'    => $this->serialize_entry( $post ),
+            ),
+            200
+        );
+    }
+
+    public function update_entry( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+        $post_id = (int) $request->get_param( 'id' );
+        $post    = get_post( $post_id );
+
+        if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+            return new WP_Error(
+                'rest_not_found',
+                __( 'No entry found with that ID.', 'em-rest-api-cpt' ),
+                array( 'status' => 404 )
+            );
+        }
+
+        $patch = array();
+        foreach ( array( 'title', 'body', 'source', 'external_id' ) as $field ) {
+            if ( null === $request->get_param( $field ) ) {
+                continue;
+            }
+
+            $patch[ $field ] = $request->get_param( $field );
+        }
+
+        if ( empty( $patch ) ) {
+            return new WP_Error(
+                'rest_empty_patch',
+                __( 'At least one valid field must be provided to update an entry.', 'em-rest-api-cpt' ),
+                array( 'status' => 400 )
+            );
+        }
+
+        foreach ( $patch as $field => $value ) {
+            if ( is_array( $value ) || is_object( $value ) ) {
+                return new WP_Error(
+                    'rest_invalid_param',
+                    sprintf(
+                        /* translators: %s: field name */
+                        __( 'The %s field must be a string value.', 'em-rest-api-cpt' ),
+                        $field
+                    ),
+                    array( 'status' => 400 )
+                );
+            }
+
+            if ( 'title' === $field ) {
+                $sanitized = sanitize_text_field( (string) $value );
+                if ( '' === trim( $sanitized ) ) {
+                    return new WP_Error(
+                        'rest_invalid_param',
+                        __( 'The title field is required and cannot be empty.', 'em-rest-api-cpt' ),
+                        array( 'status' => 400 )
+                    );
+                }
+                $patch[ $field ] = $sanitized;
+                continue;
+            }
+
+            if ( 'body' === $field ) {
+                $patch[ $field ] = wp_kses_post( (string) $value );
+                continue;
+            }
+
+            $patch[ $field ] = sanitize_text_field( (string) $value );
+        }
+
+        $updated_source   = isset( $patch['source'] ) ? $this->normalize_identity_value( (string) $patch['source'] ) : $this->normalize_identity_value( (string) get_post_meta( $post_id, '_api_source', true ) );
+        $updated_external = isset( $patch['external_id'] ) ? $this->normalize_identity_value( (string) $patch['external_id'] ) : $this->normalize_identity_value( (string) get_post_meta( $post_id, '_external_id', true ) );
+
+        if ( '' !== $this->normalize_identity_value( $updated_source ) && '' !== $this->normalize_identity_value( $updated_external ) ) {
+            $conflict_id = $this->find_duplicate_entry( $updated_source, $updated_external, $post_id );
+            if ( null !== $conflict_id ) {
+                return new WP_Error(
+                    'rest_duplicate_entry',
+                    __( 'This source/external_id pair is already used by another entry.', 'em-rest-api-cpt' ),
+                    array(
+                        'status'      => 409,
+                        'existing_id' => (int) $conflict_id,
+                    )
+                );
+            }
+        }
+
+        $payload = array(
+            'ID' => $post_id,
+        );
+
+        if ( isset( $patch['title'] ) ) {
+            $payload['post_title'] = $patch['title'];
+        }
+
+        if ( isset( $patch['body'] ) ) {
+            $payload['post_content'] = $patch['body'];
+        }
+
+        if ( isset( $patch['source'] ) ) {
+            update_post_meta( $post_id, '_api_source', $this->normalize_identity_value( (string) $patch['source'] ) );
+        }
+
+        if ( isset( $patch['external_id'] ) ) {
+            update_post_meta( $post_id, '_external_id', $this->normalize_identity_value( (string) $patch['external_id'] ) );
+        }
+
+        if ( ! empty( $payload ) && 1 < count( $payload ) ) {
+            $updated = wp_update_post( $payload, true );
+            if ( is_wp_error( $updated ) ) {
+                return new WP_Error(
+                    'rest_cannot_update',
+                    $updated->get_error_message(),
+                    array( 'status' => 500 )
+                );
+            }
+        }
+
+        return new WP_REST_Response(
+            array(
+                'success' => true,
+                'message' => __( 'Entry updated successfully.', 'em-rest-api-cpt' ),
+                'data'    => $this->serialize_entry( get_post( $post_id ) ),
             ),
             200
         );
@@ -254,6 +443,59 @@ class Make_Endpoint {
         );
     }
 
+    private function serialize_entry( \WP_Post $post ): array {
+        return array(
+            'id'          => $post->ID,
+            'title'       => $post->post_title,
+            'body'        => $post->post_content,
+            'source'      => get_post_meta( $post->ID, '_api_source', true ),
+            'external_id' => get_post_meta( $post->ID, '_external_id', true ),
+            'received_at' => get_post_meta( $post->ID, '_received_at', true ),
+        );
+    }
+
+    private function find_duplicate_entry( string $source, string $external_id, ?int $exclude_id = null ): ?int {
+        $normalized_source = $this->normalize_identity_value( $source );
+        $normalized_id     = $this->normalize_identity_value( $external_id );
+
+        if ( '' === $normalized_source || '' === $normalized_id ) {
+            return null;
+        }
+
+        $posts = get_posts(
+            array(
+                'post_type'      => self::POST_TYPE,
+                'post_status'    => 'any',
+                'posts_per_page' => 1,
+                'post__not_in'   => $exclude_id ? array( $exclude_id ) : array(),
+                'meta_query'     => array( // phpcs:ignore WordPress.DB.SlowDBQuery
+                    'relation' => 'AND',
+                    array(
+                        'key'     => '_api_source',
+                        'value'   => $normalized_source,
+                        'compare' => '=',
+                    ),
+                    array(
+                        'key'     => '_external_id',
+                        'value'   => $normalized_id,
+                        'compare' => '=',
+                    ),
+                ),
+                'fields'         => 'ids',
+            )
+        );
+
+        if ( empty( $posts ) ) {
+            return null;
+        }
+
+        return (int) $posts[0];
+    }
+
+    private function normalize_identity_value( string $value ): string {
+        return strtolower( trim( (string) $value ) );
+    }
+
     private function get_create_args(): array {
         return array(
             'title'       => array(
@@ -283,5 +525,15 @@ class Make_Endpoint {
                 'description'       => __( 'Optional ID from the external system for cross-referencing.', 'em-rest-api-cpt' ),
             ),
         );
+    }
+
+    private function get_patch_args(): array {
+        $args = $this->get_create_args();
+
+        foreach ( $args as $key => $arg ) {
+            $args[ $key ]['required'] = false;
+        }
+
+        return $args;
     }
 }

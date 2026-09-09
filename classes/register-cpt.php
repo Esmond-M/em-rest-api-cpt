@@ -34,7 +34,7 @@ class Register_CPT {
             'public'          => false,
             'show_ui'         => true,
             'show_in_menu'    => true,
-            'show_in_rest'    => true,
+            'show_in_rest'    => false,
             'menu_icon'       => 'dashicons-analytics',
             'supports'        => array( 'title', 'editor', 'custom-fields' ),
             'capability_type' => 'post',

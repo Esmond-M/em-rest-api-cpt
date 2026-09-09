@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ dev ]
+  pull_request:
+
+jobs:
+  php-and-rest-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ['8.2', '8.3']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring, zip
+          ini-values: memory_limit=1G
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Run PHP syntax check
+        run: npm run lint:php
+
+      - name: Start WordPress test environment
+        run: npx --yes @wordpress/env start
+
+      - name: Run WordPress REST test suite
+        run: npm run test:php

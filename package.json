@@ -14,12 +14,16 @@
 		"em-rest-api-cpt.php"
 	],
 	"devDependencies": {
-		"@wordpress/scripts": "^27.9.0"
+		"@wordpress/scripts": "^27.9.0",
+		"archiver": "^6.0.2"
 	},
 	"scripts": {
-        "build": "wp-scripts build",
-        "packages-update": "wp-scripts packages-update",
-        "plugin-zip": "wp-scripts plugin-zip && move *.zip build\\",
-        "start": "wp-scripts start"
+		"build": "wp-scripts build",
+		"packages-update": "wp-scripts packages-update",
+		"plugin-zip": "node scripts/package-plugin.js",
+		"start": "wp-scripts start",
+		"lint:php": "node -e \"const fs=require('fs'); const path=require('path'); const root=process.cwd(); const walk=(dir)=>{for (const entry of fs.readdirSync(dir,{withFileTypes:true})) { const full=path.join(dir,entry.name); if (entry.name === 'vendor' || entry.name === '.git' || entry.name === 'node_modules') continue; if (entry.isDirectory()) walk(full); else if (entry.name.endsWith('.php')) { try { require('child_process').execFileSync('php',['-l',full],{stdio:'inherit'}); } catch (error) { process.exitCode = 1; } } }}; walk(root);\"",
+		"test:php": "npx --yes @wordpress/env run tests-cli -- bash -lc \"cd /var/www/html/wp-content/plugins/em-rest-api-cpt && ./vendor/bin/phpunit --configuration ./phpunit.xml.dist --testdox\"",
+		"ci:check": "npm run lint:php && npm run test:php"
 	}
 }
