@@ -205,4 +205,37 @@ class EM_REST_API_CPT_REST_Baseline_Test extends WP_UnitTestCase {
 
         $this->assertSame( 404, $missing->get_status() );
     }
+
+    public function test_anonymous_core_rest_access_is_blocked(): void {
+        $post_id = self::factory()->post->create(
+            array(
+                'post_type'    => 'apidata',
+                'post_title'   => 'Private data',
+                'post_content' => 'Sensitive content',
+                'post_status'  => 'publish',
+            )
+        );
+
+        $request = new WP_REST_Request( 'GET', '/wp/v2/apidata/' . $post_id );
+        $response = rest_do_request( $request );
+
+        $this->assertSame( 404, $response->get_status() );
+    }
+
+    public function test_empty_titles_are_rejected_without_creating_entry(): void {
+        $response = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title' => '   ',
+                'body'  => 'Example note',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 400, $response->get_status() );
+        $this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
+    }
 }
