@@ -39,5 +39,8 @@ jobs:
       - name: Run PHP syntax check
         run: npm run lint:php
 
+      - name: Start WordPress test environment
+        run: npx --yes @wordpress/env start
+
       - name: Run WordPress REST test suite
         run: npm run test:php
