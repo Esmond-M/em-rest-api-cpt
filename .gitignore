@@ -21,6 +21,9 @@ vendor/
 # PHPUnit cache
 .phpunit.result.cache
 
+# Local brainstorming notes and working drafts
+em-rest-api-cpt-portfolio-improvement-plan.md
+
 # Optional eslint cache
 .eslintcache
 
