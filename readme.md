@@ -12,7 +12,10 @@ A WordPress plugin that registers a custom post type (**API Data**) and exposes 
 ## Features
 
 - Registers a custom post type: **API Data**
-- Three REST API endpoints: `POST`, `GET`, and `DELETE`
+- Authenticated REST endpoints for create, list, detail, partial update, and delete workflows
+- `POST /receive` and `POST /entries` as compatible creation aliases
+- `GET /entries/{id}` and `PATCH /entries/{id}` for detailed retrieval and partial update
+- Duplicate protection for normalized `(source, external_id)` pairs with a `409` conflict response
 - Plugin-managed **API key authentication** via `X-API-Key` header
 - Custom **meta fields** per entry: `source`, `received_at`, `external_id`
 - Custom **admin list columns** for source, external ID, and received timestamp
@@ -55,7 +58,10 @@ X-API-Key: <your-api-key>
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `POST` | `/wp-json/esmond-api/v1/receive` | Create a new API Data entry |
+| `POST` | `/wp-json/esmond-api/v1/entries` | Alias for creating a new API Data entry |
 | `GET` | `/wp-json/esmond-api/v1/entries` | List entries (filterable, paginated) |
+| `GET` | `/wp-json/esmond-api/v1/entries/{id}` | Retrieve one API Data entry |
+| `PATCH` | `/wp-json/esmond-api/v1/entries/{id}` | Partially update a single entry |
 | `DELETE` | `/wp-json/esmond-api/v1/entries/{id}` | Permanently delete an entry |
 
 ---
@@ -107,6 +113,31 @@ curl -X POST https://yoursite.domain/wp-json/esmond-api/v1/receive \
 
 ---
 
+### Retrieve an entry (GET /entries/{id})
+
+```sh
+curl "https://yoursite.domain/wp-json/esmond-api/v1/entries/42" \
+  -H "X-API-Key: YOUR_API_KEY"
+```
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 42,
+    "title": "My Entry",
+    "body": "Hello world.",
+    "source": "demo",
+    "external_id": "ext-001",
+    "received_at": "2026-05-07 14:30:00"
+  }
+}
+```
+
+---
+
 ### List entries (GET)
 
 **Query params (all optional):**
@@ -142,6 +173,19 @@ curl "https://yoursite.domain/wp-json/esmond-api/v1/entries?source=demo&per_page
   ]
 }
 ```
+
+---
+
+### Update an entry (PATCH /entries/{id})
+
+```sh
+curl -X PATCH "https://yoursite.domain/wp-json/esmond-api/v1/entries/42" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -d '{"title":"Updated title","source":"demo","external_id":"ext-001"}'
+```
+
+Only supplied fields are changed. Omitted fields remain intact. Empty titles and invalid payload types are rejected with `400`.
 
 ---
 
@@ -192,8 +236,10 @@ All errors return a standard WP REST error shape with an appropriate HTTP status
 
 | Status | Code | Meaning |
 |--------|------|---------|
+| 400 | `rest_invalid_param` | Missing or invalid request data |
 | 401 | `rest_forbidden` | Missing or invalid API key |
 | 404 | `rest_not_found` | Entry ID does not exist |
+| 409 | `rest_duplicate_entry` | Normalized `(source, external_id)` already exists |
 | 500 | `rest_cannot_create` | Post insert failed |
 | 500 | `rest_api_key_not_configured` | No API key set in options |
 

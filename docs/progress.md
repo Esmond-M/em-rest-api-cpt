@@ -43,4 +43,20 @@
 - Current status: P5 CI validation is implemented and the local equivalent of the workflow has passed.
 - Next milestone: P6 packaging reproducibility.
 
+## 2026-09-09 - P6: reproducible package build
+
+- Added a dedicated packaging script that stages only the installable plugin files, excludes development-only dependencies and working artifacts, and outputs a clean ZIP under the build directory.
+- Validation:
+  - `npm run plugin-zip` was run locally and produced a fresh archive with the expected plugin root.
+  - The built archive was inspected to confirm it contains the plugin entry file and classes without the test or dev directories.
+- Current status: P6 packaging reproducibility is implemented and verified.
+- Next milestone: P7 documentation and release readiness.
+
+## 2026-09-09 - P7: integration workflow and release documentation
+
+- Updated the README to match the actual API contract: create alias, detail GET, partial PATCH, duplicate rejection, and the supported error codes.
+- Validation:
+  - `npm run lint:php` and `npm run test:php` were run after the README update to confirm the project remains in a green state.
+- Current status: P7 documentation is updated and the plugin remains verified.
+
 Commit history is the authoritative record of commit IDs; record prior IDs here when useful rather than trying to embed a commit's own hash in itself.

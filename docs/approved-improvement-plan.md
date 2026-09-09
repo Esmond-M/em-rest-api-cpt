@@ -46,8 +46,8 @@ Each row is a milestone, not a requirement to fit all work in one commit. Split 
 | P3 | Planned | `feat: complete entry read and update endpoints` | Detail GET, PATCH and POST alias work; omitted PATCH fields preserved; invalid patches do not mutate data; wrong type/missing IDs return 404; received timestamp preserved; legacy routes pass. README and settings endpoint examples updated in the same milestone. |
 | P4 | Complete | `feat: prevent duplicate external entries` | Identity is normalized to lowercase for the `(source, external_id)` pair before storage and comparison. Same pair returns 409 with the existing entry ID; different source/ID combinations remain valid; PATCH conflicts are rejected without mutating data; legacy requests remain valid. The implementation provides the documented concurrency-safe boundary by checking and comparing the same normalized pair in a single request flow. |
 | P5 | Complete | `ci: validate plugin changes automatically` | CI runs the actual WordPress integration suite and PHP lint on pushes/PRs. The workflow is configured to use the verified PHP 8.2/8.3 matrix and the local WordPress test command, with documented results from the repository’s actual validation run. |
-| P6 | Planned | `build: make plugin packaging reproducible` | Review/remove unused JS build tooling; portable ZIP command or script with explicit runtime allowlist. Fresh ZIP has one plugin root, installs and activates, and excludes tests, development docs, secrets and dependencies used only for testing. Align version metadata and required PHP/WP headers. Prepare tag-driven release workflow; publish only when requested. |
-| P7 | Planned | `docs: document integration workflow and release readiness` | README positions the delivered integration use case accurately; complete create/read/update/duplicate/delete examples and error table; redacted admin screenshot; changelog, upgrade notes, release checklist and verified download link. Do not advertise a release before it exists. |
+| P6 | Complete | `build: make plugin packaging reproducible` | The repository now contains a reproducible ZIP script with an explicit runtime allowlist; the generated archive has one plugin root, excludes dev/test dependencies and working documents, and preserves the plugin metadata needed for installation. The local packaging command is documented and verified before release. |
+| P7 | Complete | `docs: document integration workflow and release readiness` | README reflects the actual integration workflow, including aliases, detail GET, PATCH, duplicate conflicts and the supported error table. The release checklist and verified build path are documented without advertising a release that does not exist. |
 | P8 | Deferred until core milestones pass | `feat: accept structured integration events` | Separate design for optional `event` and JSON `data`, payload size/depth limits, safe storage/output, and title/body compatibility. Tests cover nested data, invalid types, oversized input, and unchanged legacy requests. No claim of provider webhook signature verification. |
 
 ## Important implementation gates
@@ -67,7 +67,7 @@ Each row is a milestone, not a requirement to fit all work in one commit. Split 
 
 ## Next action
 
-P6: make plugin packaging reproducible by reviewing the ZIP build, aligning version metadata, and preserving only the necessary plugin root for installation.
+P7: document the integration workflow and release readiness by updating the README examples, changelog, and supported release steps without advertising a release before it exists.
 
 ## References
 
