@@ -238,4 +238,79 @@ class EM_REST_API_CPT_REST_Baseline_Test extends WP_UnitTestCase {
         $this->assertSame( 400, $response->get_status() );
         $this->assertSame( 'rest_invalid_param', $response->as_error()->get_error_code() );
     }
+
+    public function test_detail_get_and_patch_endpoints_work_for_existing_entry(): void {
+        $create = $this->request(
+            'POST',
+            '/receive',
+            array(
+                'title'      => 'Original',
+                'body'       => 'Original body',
+                'source'     => 'legacy-app',
+                'external_id' => 'orig-1',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 201, $create->get_status() );
+        $entry_id = $create->get_data()['data']['id'];
+
+        $detail = $this->request(
+            'GET',
+            '/entries/' . $entry_id,
+            array(),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 200, $detail->get_status() );
+        $this->assertSame( 'Original', $detail->get_data()['data']['title'] );
+
+        $alias = $this->request(
+            'POST',
+            '/entries',
+            array(
+                'title'      => 'Alias Entry',
+                'body'       => 'Alias body',
+                'source'     => 'new-app',
+                'external_id' => 'alias-2',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 201, $alias->get_status() );
+
+        $patch = $this->request(
+            'PATCH',
+            '/entries/' . $entry_id,
+            array(
+                'title' => 'Updated title',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 200, $patch->get_status() );
+        $this->assertSame( 'Updated title', $patch->get_data()['data']['title'] );
+        $this->assertSame( 'Original body', $patch->get_data()['data']['body'] );
+
+        $invalid = $this->request(
+            'PATCH',
+            '/entries/' . $entry_id,
+            array(
+                'title' => '   ',
+            ),
+            array(
+                'X-API-Key' => self::API_KEY,
+            )
+        );
+
+        $this->assertSame( 400, $invalid->get_status() );
+    }
 }
