@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const archiver = require('archiver');
 
 const root = process.cwd();
 const buildDir = path.join(root, 'build');
@@ -68,24 +68,32 @@ function stagePluginFiles() {
   }
 }
 
-function archivePlugin() {
+async function archivePlugin() {
   removeDirIfExists(buildDir);
   ensureDir(buildDir);
 
-  const tempZip = path.join(buildDir, 'em-rest-api-cpt-temp.zip');
-  removeDirIfExists(tempZip);
+  await new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
-  const zipArgs = ['-r', '-q', tempZip, '.'];
-  execFileSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${tempDir}\*' -DestinationPath '${tempZip}' -Force`], {
-    cwd: root,
-    stdio: 'inherit',
+    output.on('close', resolve);
+    output.on('error', reject);
+    archive.on('error', reject);
+    archive.pipe(output);
+    archive.directory(tempDir, 'em-rest-api-cpt');
+    archive.finalize();
   });
 
-  fs.copyFileSync(tempZip, zipPath);
-  fs.rmSync(tempZip, { force: true });
   removeDirIfExists(tempDir);
 }
 
-stagePluginFiles();
-archivePlugin();
-console.log(`Created plugin archive: ${zipPath}`);
+async function main() {
+  stagePluginFiles();
+  await archivePlugin();
+  console.log(`Created plugin archive: ${zipPath}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
